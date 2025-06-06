@@ -7,7 +7,7 @@ COPY . .
 RUN go mod tidy
 RUN CGO_ENABLED=0 GOOS=linux go build -o wrapper-manager
 
-FROM alpine:latest
+FROM ubuntu:latest
 
 WORKDIR /root/
 
