@@ -35,7 +35,7 @@ func checkSongAvailableOnRegion(adamId string, region string) bool {
 		req.Header.Set("User-Agent", "Mozilla/5.0 ...")
 		req.Header.Set("Origin", "https://music.apple.com")
 
-		resp, err := http.DefaultClient.Do(req)
+		resp, err := GetHttpClient().Do(req)
 		if err != nil {
 			return false, err
 		}
@@ -62,7 +62,7 @@ func getToken() (string, error) {
 		return "", err
 	}
 
-	resp, err := http.DefaultClient.Do(req)
+	resp, err := GetHttpClient().Do(req)
 	if err != nil {
 		return "", err
 	}
@@ -86,7 +86,7 @@ func getToken() (string, error) {
 		return "", err
 	}
 
-	resp, err = http.DefaultClient.Do(req)
+	resp, err = GetHttpClient().Do(req)
 	if err != nil {
 		return "", err
 	}

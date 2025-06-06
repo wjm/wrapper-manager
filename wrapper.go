@@ -9,7 +9,6 @@ import (
 	"github.com/gofrs/uuid/v5"
 	log "github.com/sirupsen/logrus"
 	"io"
-	"net/http"
 	"os"
 	"os/exec"
 	"strconv"
@@ -79,7 +78,7 @@ func WrapperInitial(account string, password string) {
 		fmt.Sprintf("-B%s", "/data/instances/"+instance.Id),
 		fmt.Sprintf("-D%d", instance.DecryptPort),
 		fmt.Sprintf("-M%d", instance.M3U8Port),
-		fmt.Sprintf("-P%s", os.Getenv("WRAPPER_PROXY")),
+		fmt.Sprintf("-P%s", PROXY),
 		"-F")
 	cmd.Dir = "data/wrapper/"
 
@@ -112,7 +111,7 @@ func WrapperStart(id string) {
 		fmt.Sprintf("-B%s", "/data/instances/"+id),
 		fmt.Sprintf("-D%d", instance.DecryptPort),
 		fmt.Sprintf("-M%d", instance.M3U8Port),
-		fmt.Sprintf("-P%s", os.Getenv("WRAPPER_PROXY")),
+		fmt.Sprintf("-P%s", PROXY),
 	)
 	cmd.Dir = "data/wrapper/"
 
@@ -180,7 +179,7 @@ func provide2FACode(id string, code string) {
 }
 
 func DownloadWrapperRelease(mirror bool) {
-	resp, err := http.Get("https://api.github.com/repos/WorldObservationLog/wrapper/releases/latest")
+	resp, err := GetHttpClient().Get("https://api.github.com/repos/WorldObservationLog/wrapper/releases/latest")
 	if err != nil {
 		panic(err)
 	}
@@ -197,7 +196,7 @@ func DownloadWrapperRelease(mirror bool) {
 	if mirror {
 		downloadUrl = strings.Replace(downloadUrl.(string), "github.com", "gh-proxy.com/github.com", -1)
 	}
-	wrapperResp, err := http.Get(downloadUrl.(string))
+	wrapperResp, err := GetHttpClient().Get(downloadUrl.(string))
 	if err != nil {
 		panic(err)
 	}
@@ -209,7 +208,7 @@ func DownloadWrapperRelease(mirror bool) {
 }
 
 func DownloadStorefrontIds() {
-	resp, err := http.Get("https://gist.githubusercontent.com/BrychanOdlum/2208578ba151d1d7c4edeeda15b4e9b1/raw/8f01e4a4cb02cf97a48aba4665286b0e8de14b8e/storefrontmappings.json")
+	resp, err := GetHttpClient().Get("https://gist.githubusercontent.com/BrychanOdlum/2208578ba151d1d7c4edeeda15b4e9b1/raw/8f01e4a4cb02cf97a48aba4665286b0e8de14b8e/storefrontmappings.json")
 	if err != nil {
 		panic(err)
 	}

@@ -18,6 +18,8 @@ import (
 	pb "wrapper-manager/proto"
 )
 
+var PROXY string
+
 type server struct {
 	pb.UnimplementedWrapperManagerServiceServer
 }
@@ -278,6 +280,7 @@ func main() {
 	var host = flag.String("host", "localhost", "host of gRPC server")
 	var port = flag.Int("port", 8080, "port of gRPC server")
 	var mirror = flag.Bool("mirror", false, "use mirror to download wrapper and file (for Chinese users)")
+	flag.StringVar(&PROXY, "proxy", "", "proxy for wrapper and manager")
 	flag.Parse()
 
 	currentUser, err := user.Current()

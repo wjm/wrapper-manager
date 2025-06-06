@@ -8,7 +8,20 @@ import (
 	_ "github.com/mattn/go-sqlite3"
 	"io"
 	"net/http"
+	"net/url"
 )
+
+func GetHttpClient() *http.Client {
+	if PROXY == "" {
+		return http.DefaultClient
+	}
+	proxyUrl, err := url.Parse(PROXY)
+	if err != nil {
+		panic("Invalid proxy URL: " + PROXY)
+	}
+	transport := &http.Transport{Proxy: http.ProxyURL(proxyUrl)}
+	return &http.Client{Transport: transport}
+}
 
 func GetInstanceAuthToken(instance *WrapperInstance) (string, string, error) {
 	db, err := sql.Open("sqlite3", fmt.Sprintf("data/wrapper/rootfs/data/instances/%s/mpl_db/cookies.sqlitedb", instance.Id))
@@ -56,7 +69,7 @@ func GetLyrics(adamID string, region string, language string, dsid string, token
 		Name:  fmt.Sprintf("mz_at_ssl-%s", dsid),
 		Value: accessToken,
 	})
-	resp, err := http.DefaultClient.Do(req)
+	resp, err := GetHttpClient().Do(req)
 	if err != nil {
 		return "", err
 	}

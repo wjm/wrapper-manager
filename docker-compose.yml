@@ -2,8 +2,6 @@ services:
   wrapper-manager:
     build: .
     container_name: wrapper-manager
-    #environment:
-    #  - WRAPPER_PROXY=http://172.17.0.1:1080
     command: [
       "--host", "localhost",
       "--port", "8080",
