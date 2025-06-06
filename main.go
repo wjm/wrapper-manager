@@ -273,15 +273,19 @@ func newServer() *server {
 }
 
 func main() {
+	log.SetOutput(os.Stdout)
+	log.SetLevel(log.InfoLevel)
+
 	currentUser, err := user.Current()
 	if err != nil {
 		panic(err)
 	}
 	if currentUser.Name != "root" {
-		panic("root permission required")
+		log.Panicln("root permission required")
 	}
 
 	if _, err := os.Stat("data/wrapper"); errors.Is(err, os.ErrNotExist) {
+		log.Warn("wrapper does not exist, downloading...")
 		err = os.MkdirAll("data/data", 0777)
 		if err != nil {
 			panic(err)
@@ -290,6 +294,7 @@ func main() {
 	}
 
 	if _, err := os.Stat("data/storefront_ids.json"); errors.Is(err, os.ErrNotExist) {
+		log.Warn("storefront ids file dose not exist, downloading...")
 		DownloadStorefrontIds()
 	}
 
@@ -305,9 +310,6 @@ func main() {
 			go WrapperStart(inst.Id)
 		}
 	}
-
-	log.SetOutput(os.Stdout)
-	log.SetLevel(log.InfoLevel)
 
 	var host = flag.String("host", "localhost", "host of gRPC server")
 	var port = flag.Int("port", 8080, "port of gRPC server")
