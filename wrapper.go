@@ -79,6 +79,7 @@ func WrapperInitial(account string, password string) {
 		fmt.Sprintf("-B%s", "/data/instances/"+instance.Id),
 		fmt.Sprintf("-D %d", instance.DecryptPort),
 		fmt.Sprintf("-M %d", instance.M3U8Port),
+		fmt.Sprintf("-P %s", os.Getenv("HTTP_PROXY")),
 		"-F")
 	cmd.Dir = "data/wrapper/"
 
@@ -111,6 +112,7 @@ func WrapperStart(id string) {
 		fmt.Sprintf("-B%s", "/data/instances/"+id),
 		fmt.Sprintf("-D %d", instance.DecryptPort),
 		fmt.Sprintf("-M %d", instance.M3U8Port),
+		fmt.Sprintf("-P %s", os.Getenv("HTTP_PROXY")),
 	)
 	cmd.Dir = "data/wrapper/"
 
