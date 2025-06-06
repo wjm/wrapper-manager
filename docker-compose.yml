@@ -4,14 +4,10 @@ services:
   wrapper-manager:
     build: .
     container_name: wrapper-manager
-    environment:
-      HOST: "localhost"
-      PORT: "8080"
-      MIRROR: "false"
     command: [
-      "--host", "${HOST}",
-      "--port", "${PORT}",
-      "--mirror", "${MIRROR}"
+      "--host", "localhost",
+      "--port", "8080",
+      "--mirror", "false"
     ]
     ports:
       - "8080:8080"
