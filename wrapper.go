@@ -72,14 +72,20 @@ func WrapperInitial(account string, password string) {
 		DoLogin:     true,
 	}
 
-	cmd := exec.Command("./wrapper",
+	args := []string{
 		"-H0.0.0.0",
 		fmt.Sprintf("-L%s:%s", account, password),
 		fmt.Sprintf("-B%s", "/data/instances/"+instance.Id),
 		fmt.Sprintf("-D%d", instance.DecryptPort),
 		fmt.Sprintf("-M%d", instance.M3U8Port),
-		fmt.Sprintf("-P%s", PROXY),
-		"-F")
+		"-F",
+	}
+
+	if PROXY != "" {
+		args = append(args, fmt.Sprintf("-P%s", PROXY))
+	}
+
+	cmd := exec.Command("./wrapper", args...)
 	cmd.Dir = "data/wrapper/"
 
 	ptmx, err := pty.Start(cmd)
@@ -106,13 +112,18 @@ func WrapperStart(id string) {
 		DoLogin:     false,
 	}
 
-	cmd := exec.Command("./wrapper",
+	args := []string{
 		"-H0.0.0.0",
 		fmt.Sprintf("-B%s", "/data/instances/"+id),
 		fmt.Sprintf("-D%d", instance.DecryptPort),
 		fmt.Sprintf("-M%d", instance.M3U8Port),
-		fmt.Sprintf("-P%s", PROXY),
-	)
+	}
+
+	if PROXY != "" {
+		args = append(args, fmt.Sprintf("-P%s", PROXY))
+	}
+
+	cmd := exec.Command("./wrapper", args...)
 	cmd.Dir = "data/wrapper/"
 
 	ptmx, err := pty.Start(cmd)
