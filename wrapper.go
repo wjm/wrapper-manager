@@ -74,12 +74,12 @@ func WrapperInitial(account string, password string) {
 	}
 
 	cmd := exec.Command("./wrapper",
-		"-H 0.0.0.0",
-		fmt.Sprintf("-L %s:%s", account, password),
+		"-H0.0.0.0",
+		fmt.Sprintf("-L%s:%s", account, password),
 		fmt.Sprintf("-B%s", "/data/instances/"+instance.Id),
-		fmt.Sprintf("-D %d", instance.DecryptPort),
-		fmt.Sprintf("-M %d", instance.M3U8Port),
-		fmt.Sprintf("-P %s", os.Getenv("HTTP_PROXY")),
+		fmt.Sprintf("-D%d", instance.DecryptPort),
+		fmt.Sprintf("-M%d", instance.M3U8Port),
+		fmt.Sprintf("-P%s", os.Getenv("WRAPPER_PROXY")),
 		"-F")
 	cmd.Dir = "data/wrapper/"
 
@@ -108,11 +108,11 @@ func WrapperStart(id string) {
 	}
 
 	cmd := exec.Command("./wrapper",
-		"-H 0.0.0.0",
+		"-H0.0.0.0",
 		fmt.Sprintf("-B%s", "/data/instances/"+id),
-		fmt.Sprintf("-D %d", instance.DecryptPort),
-		fmt.Sprintf("-M %d", instance.M3U8Port),
-		fmt.Sprintf("-P %s", os.Getenv("HTTP_PROXY")),
+		fmt.Sprintf("-D%d", instance.DecryptPort),
+		fmt.Sprintf("-M%d", instance.M3U8Port),
+		fmt.Sprintf("-P%s", os.Getenv("WRAPPER_PROXY")),
 	)
 	cmd.Dir = "data/wrapper/"
 
