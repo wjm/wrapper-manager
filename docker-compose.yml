@@ -1,0 +1,15 @@
+version: '3.8'
+
+services:
+  wrapper-manager:
+    build: .
+    container_name: wrapper-manager
+    environment:
+      HOST: "localhost"
+      PORT: "8080"
+      MIRROR: "false"
+    command: [
+      "--host", "${HOST}",
+      "--port", "${PORT}",
+      "--mirror", "${MIRROR}"
+    ]
