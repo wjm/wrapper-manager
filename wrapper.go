@@ -1,0 +1,219 @@
+package main
+
+import (
+	"bufio"
+	"encoding/json"
+	"fmt"
+	"github.com/artdarek/go-unzip"
+	"github.com/creack/pty"
+	"github.com/gofrs/uuid/v5"
+	log "github.com/sirupsen/logrus"
+	"io"
+	"net/http"
+	"os"
+	"os/exec"
+	"strconv"
+	"strings"
+)
+
+func parseStorefrontID(id string) string {
+	sfID, err := strconv.Atoi(strings.Split(id, "-")[0])
+	if err != nil {
+		panic(err)
+	}
+	type StorefrontMapping struct {
+		Name         string `json:"name"`
+		Code         string `json:"code"`
+		StorefrontId int    `json:"storefrontId"`
+	}
+	var mapping []StorefrontMapping
+	file, err := os.ReadFile("data/storefront_ids.json")
+	if err != nil {
+		panic(err)
+	}
+	err = json.Unmarshal(file, &mapping)
+	if err != nil {
+		panic(err)
+	}
+	for _, element := range mapping {
+		if element.StorefrontId == sfID {
+			return element.Code
+		}
+	}
+	return ""
+}
+
+func PrepareWrapper() {
+	if _, err := os.Stat("data/wrapper/wrapper"); os.IsNotExist(err) {
+		if _, err := os.Stat("data/wrapper-x86_64.zip"); os.IsNotExist(err) {
+			DownloadWrapperRelease()
+		}
+		err = unzip.New("data/wrapper-x86_64.zip", "data/wrapper").Extract()
+		if err != nil {
+			panic(err)
+		}
+		err = os.Chmod("data/wrapper/wrapper", 0777)
+		if err != nil {
+			panic(err)
+		}
+	}
+}
+
+func WrapperInitial(account string, password string) {
+	PrepareWrapper()
+	id := uuid.NewV5(uuid.FromStringOrNil("77777777-7777-7777-7777-77777777"), account)
+	err := os.MkdirAll("data/wrapper/rootfs/data/instances/"+id.String(), 0777)
+	if err != nil {
+		panic(err)
+	}
+
+	instance := WrapperInstance{
+		Id:          id.String(),
+		DecryptPort: GenerateUniquePort(),
+		M3U8Port:    GenerateUniquePort(),
+		DoLogin:     true,
+	}
+
+	cmd := exec.Command("./wrapper",
+		"-H 0.0.0.0",
+		fmt.Sprintf("-L %s:%s", account, password),
+		fmt.Sprintf("-B%s", "/data/instances/"+instance.Id),
+		fmt.Sprintf("-D %d", instance.DecryptPort),
+		fmt.Sprintf("-M %d", instance.M3U8Port),
+		"-F")
+	cmd.Dir = "data/wrapper/"
+
+	ptmx, err := pty.Start(cmd)
+	if err != nil {
+		panic(err)
+	}
+	defer func() { _ = ptmx.Close() }()
+
+	go handleOutput(ptmx, instance)
+
+	err = cmd.Wait()
+	if err != nil {
+		log.Warnf("Wrapper exited with error: %v\n", err)
+	}
+
+	go wrapperDown(instance)
+}
+
+func WrapperStart(id string) {
+	PrepareWrapper()
+
+	instance := WrapperInstance{
+		Id:          id,
+		DecryptPort: GenerateUniquePort(),
+		M3U8Port:    GenerateUniquePort(),
+		DoLogin:     false,
+	}
+
+	cmd := exec.Command("./wrapper",
+		"-H 0.0.0.0",
+		fmt.Sprintf("-B%s", "/data/instances/"+id),
+		fmt.Sprintf("-D %d", instance.DecryptPort),
+		fmt.Sprintf("-M %d", instance.M3U8Port),
+	)
+	cmd.Dir = "data/wrapper/"
+
+	ptmx, err := pty.Start(cmd)
+	if err != nil {
+		panic(err)
+	}
+	defer func() { _ = ptmx.Close() }()
+
+	go handleOutput(ptmx, instance)
+
+	_ = cmd.Wait()
+
+	go wrapperDown(instance)
+}
+
+func handleOutput(reader io.Reader, instance WrapperInstance) {
+	scanner := bufio.NewScanner(reader)
+	for scanner.Scan() {
+		line := scanner.Text()
+		if !strings.HasPrefix(line, "__") {
+			log.Debug(fmt.Sprintf("[wrapper %s]", strings.Split(instance.Id, "-")[0]), line)
+		}
+
+		if strings.Contains(line, "Waiting for input...") {
+			go Login2FAHandler(instance.Id)
+		}
+		if strings.Contains(line, "[!] listening m3u8 request on") {
+			go wrapperReady(instance)
+		}
+		if strings.Contains(line, "[!] login failed") {
+			go LoginFailedHandler(instance.Id)
+		}
+	}
+}
+
+func wrapperReady(instance WrapperInstance) {
+	storefrontID, err := os.ReadFile(fmt.Sprintf("data/wrapper/rootfs/data/instances/%s/STOREFRONT_ID", instance.Id))
+	if err != nil {
+		panic(err)
+	}
+	region := parseStorefrontID(string(storefrontID))
+	instance.Region = region
+	InsertInstance(instance)
+	DispatcherInstance.AddInstance(instance)
+	instance.DoLogin = false
+	go LoginDoneHandler(instance.Id)
+	log.Info(fmt.Sprintf("[wrapper %s]", strings.Split(instance.Id, "-")[0]), " Wrapper ready")
+}
+
+func wrapperDown(instance WrapperInstance) {
+	log.Info(fmt.Sprintf("[wrapper %s]", strings.Split(instance.Id, "-")[0]), " Wrapper Down")
+	DispatcherInstance.RemoveInstance(instance)
+	RemoveInstance(instance)
+	if !instance.DoLogin {
+		go WrapperStart(instance.Id)
+	}
+}
+
+func provide2FACode(id string, code string) {
+	err := os.WriteFile("data/wrapper/rootfs/data/instances/"+id+"/2fa.txt", []byte(code), 0777)
+	if err != nil {
+		panic(err)
+	}
+}
+
+func DownloadWrapperRelease() {
+	resp, err := http.Get("https://api.github.com/repos/WorldObservationLog/wrapper/releases/latest")
+	if err != nil {
+		panic(err)
+	}
+	buf := new(strings.Builder)
+	_, err = io.Copy(buf, resp.Body)
+	var info struct {
+		Assets []map[string]interface{} `json:"assets"`
+	}
+	err = json.Unmarshal([]byte(buf.String()), &info)
+	if err != nil {
+		panic(err)
+	}
+	downloadUrl := info.Assets[0]["browser_download_url"]
+	wrapperResp, err := http.Get(downloadUrl.(string))
+	if err != nil {
+		panic(err)
+	}
+	binary, err := io.ReadAll(wrapperResp.Body)
+	err = os.WriteFile("data/wrapper-x86_64.zip", binary, 0777)
+	if err != nil {
+		panic(err)
+	}
+}
+
+func DownloadStorefrontIds() {
+	resp, err := http.Get("https://gist.githubusercontent.com/BrychanOdlum/2208578ba151d1d7c4edeeda15b4e9b1/raw/8f01e4a4cb02cf97a48aba4665286b0e8de14b8e/storefrontmappings.json")
+	if err != nil {
+		panic(err)
+	}
+	ids, err := io.ReadAll(resp.Body)
+	err = os.WriteFile("data/storefront_ids.json", ids, 0777)
+	if err != nil {
+		panic(err)
+	}
+}
