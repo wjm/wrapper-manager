@@ -315,7 +315,7 @@ func main() {
 		}
 	}
 
-	log.Printf("WrapperManager running at %s:%d\n", *host, *port)
+	log.Printf("wrapperManager running at %s:%d", *host, *port)
 	lis, err := net.Listen("tcp", fmt.Sprintf("%s:%d", *host, *port))
 	if err != nil {
 		log.Fatalf("failed to listen: %v", err)
