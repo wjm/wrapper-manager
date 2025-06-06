@@ -13,7 +13,7 @@ Only supports linux x86_64 arch
 
 ## Deploy
 ```shell
-# mkdir wrapper-manager && cd wrapper-manager
-# go build github.com/WorldObservationLog/wrapper-manager
-# ./wrapper --host localhost --port 8080
+git clone https://github.com/WorldObservationLog/wrapper-manager
+cd wrapper-manager
+docker compose up
 ```
