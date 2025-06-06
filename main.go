@@ -275,13 +275,19 @@ func newServer() *server {
 }
 
 func main() {
-	log.SetOutput(os.Stdout)
-	log.SetLevel(log.InfoLevel)
 	var host = flag.String("host", "localhost", "host of gRPC server")
 	var port = flag.Int("port", 8080, "port of gRPC server")
 	var mirror = flag.Bool("mirror", false, "use mirror to download wrapper and file (for Chinese users)")
+	var debug = flag.Bool("debug", false, "enable debug output")
 	flag.StringVar(&PROXY, "proxy", "", "proxy for wrapper and manager")
 	flag.Parse()
+
+	log.SetOutput(os.Stdout)
+	if *debug {
+		log.SetLevel(log.DebugLevel)
+	} else {
+		log.SetLevel(log.InfoLevel)
+	}
 
 	currentUser, err := user.Current()
 	if err != nil {
