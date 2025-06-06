@@ -43,10 +43,10 @@ func parseStorefrontID(id string) string {
 	return ""
 }
 
-func PrepareWrapper() {
+func PrepareWrapper(mirror bool) {
 	if _, err := os.Stat("data/wrapper/wrapper"); os.IsNotExist(err) {
 		if _, err := os.Stat("data/wrapper-x86_64.zip"); os.IsNotExist(err) {
-			DownloadWrapperRelease()
+			DownloadWrapperRelease(mirror)
 		}
 		err = unzip.New("data/wrapper-x86_64.zip", "data/wrapper").Extract()
 		if err != nil {
@@ -60,7 +60,6 @@ func PrepareWrapper() {
 }
 
 func WrapperInitial(account string, password string) {
-	PrepareWrapper()
 	id := uuid.NewV5(uuid.FromStringOrNil("77777777-7777-7777-7777-77777777"), account)
 	err := os.MkdirAll("data/wrapper/rootfs/data/instances/"+id.String(), 0777)
 	if err != nil {
@@ -100,8 +99,6 @@ func WrapperInitial(account string, password string) {
 }
 
 func WrapperStart(id string) {
-	PrepareWrapper()
-
 	instance := WrapperInstance{
 		Id:          id,
 		DecryptPort: GenerateUniquePort(),
@@ -180,7 +177,7 @@ func provide2FACode(id string, code string) {
 	}
 }
 
-func DownloadWrapperRelease() {
+func DownloadWrapperRelease(mirror bool) {
 	resp, err := http.Get("https://api.github.com/repos/WorldObservationLog/wrapper/releases/latest")
 	if err != nil {
 		panic(err)
@@ -195,6 +192,9 @@ func DownloadWrapperRelease() {
 		panic(err)
 	}
 	downloadUrl := info.Assets[0]["browser_download_url"]
+	if mirror {
+		downloadUrl = strings.Replace(downloadUrl.(string), "github.com", "gh-proxy.com/github.com", -1)
+	}
 	wrapperResp, err := http.Get(downloadUrl.(string))
 	if err != nil {
 		panic(err)

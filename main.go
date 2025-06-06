@@ -275,6 +275,10 @@ func newServer() *server {
 func main() {
 	log.SetOutput(os.Stdout)
 	log.SetLevel(log.InfoLevel)
+	var host = flag.String("host", "localhost", "host of gRPC server")
+	var port = flag.Int("port", 8080, "port of gRPC server")
+	var mirror = flag.Bool("mirror", false, "use mirror to download wrapper and file (for Chinese users)")
+	flag.Parse()
 
 	currentUser, err := user.Current()
 	if err != nil {
@@ -290,7 +294,7 @@ func main() {
 		if err != nil {
 			panic(err)
 		}
-		PrepareWrapper()
+		PrepareWrapper(*mirror)
 	}
 
 	if _, err := os.Stat("data/storefront_ids.json"); errors.Is(err, os.ErrNotExist) {
@@ -311,9 +315,6 @@ func main() {
 		}
 	}
 
-	var host = flag.String("host", "localhost", "host of gRPC server")
-	var port = flag.Int("port", 8080, "port of gRPC server")
-	flag.Parse()
 	log.Printf("WrapperManager running at %s:%d\n", *host, *port)
 	lis, err := net.Listen("tcp", fmt.Sprintf("%s:%d", *host, *port))
 	if err != nil {
