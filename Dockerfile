@@ -1,8 +1,9 @@
-FROM golang:1.22 as builder
+FROM golang:1.23 as builder
 
 WORKDIR /app
 
 COPY . .
+# RUN go env -w GO111MODULE=on && go env -w GOPROXY=https://goproxy.cn,direct
 RUN go mod tidy
 RUN CGO_ENABLED=0 GOOS=linux go build -o wrapper-manager
 
