@@ -284,9 +284,9 @@ func main() {
 		log.Panicln("root permission required")
 	}
 
-	if _, err := os.Stat("data/wrapper"); errors.Is(err, os.ErrNotExist) {
+	if _, err := os.Stat("data/wrapper/wrapper"); errors.Is(err, os.ErrNotExist) {
 		log.Warn("wrapper does not exist, downloading...")
-		err = os.MkdirAll("data/data", 0777)
+		err = os.MkdirAll("data/wrapper", 0777)
 		if err != nil {
 			panic(err)
 		}
