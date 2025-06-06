@@ -5,7 +5,7 @@ go 1.23.0
 toolchain go1.23.5
 
 require (
-	github.com/artdarek/go-unzip v1.0.1-0.20210323073738-f9883ad8bd15
+	github.com/artdarek/go-unzip v1.0.0
 	github.com/creack/pty v1.1.24
 	github.com/gofrs/uuid/v5 v5.3.2
 	github.com/mattn/go-sqlite3 v1.14.28
