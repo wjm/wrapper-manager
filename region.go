@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"golang.org/x/sync/singleflight"
 	"io"
+	"math/rand"
 	"net/http"
 	"regexp"
 	"sync"
@@ -109,10 +110,14 @@ func getToken() (string, error) {
 }
 
 func SelectInstance(adamId string) string {
+	var selectedInstances []string
 	for _, instance := range Instances {
 		if checkSongAvailableOnRegion(adamId, instance.Region) {
-			return instance.Id
+			selectedInstances = append(selectedInstances, instance.Id)
 		}
+	}
+	if len(selectedInstances) != 0 {
+		return selectedInstances[rand.Intn(len(selectedInstances))]
 	}
 	return ""
 }
