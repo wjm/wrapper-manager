@@ -12,6 +12,7 @@ FROM ubuntu:latest
 WORKDIR /root/
 
 COPY --from=builder /app/wrapper-manager .
+RUN apt-get update && apt-get install -y ca-certificates
 RUN chmod +x ./wrapper-manager
 
 ENTRYPOINT ["./wrapper-manager"]
