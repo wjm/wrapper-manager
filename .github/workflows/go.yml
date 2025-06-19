@@ -1,37 +1,144 @@
-# This workflow will build a golang project
+# This workflow builds, tests, and releases a Go project.
+#
+# CI (Build & Test):
+# - Runs on every push or pull request to the 'main' branch.
+# - It builds the code and runs tests to ensure integrity.
+#
+# Release:
+# - Runs ONLY when you push a tag in the format 'v*.*.*' (e.g., v1.0.0, v1.2.3).
+# - It cross-compiles the application for Windows, macOS, and Linux (amd64/arm64).
+# - The compiled binaries are then attached to a new GitHub Release.
+#
 # For more information see: https://docs.github.com/en/actions/automating-builds-and-tests/building-and-testing-go
 
-name: Go
+name: Go CI and Release
 
 on:
   push:
     branches: [ "main" ]
+    # Trigger the release job when a tag is pushed, e.g., v1.0.0
+    tags:
+      - 'v*.*.*'
   pull_request:
     branches: [ "main" ]
 
 jobs:
-
-  build:
+  # This job runs on all pushes and PRs to main. Its goal is to check for correctness.
+  build-and-test:
+    name: Build & Test
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v4
 
     - name: Set up Go
-      uses: actions/setup-go@v4
+      uses: actions/setup-go@v5
       with:
-        go-versionifile: './go.mod'
+        # Note: I've corrected the typo from 'go-versionifile' to 'go-version-file'
+        go-version-file: './go.mod'
+        cache: true # Enable build caching
 
-    - name: setup
-      run: go mod tidy
-    - name: Build
-      run: CGO_ENABLED=1 GOOS=linux go build -v -o wrapper-manager
-    - name: Upload a Build Artifact
-      uses: actions/upload-artifact@v4.6.2
+    - name: Tidy and Vet
+      run: |
+        go mod tidy
+        go vet ./...
+        
+    - name: Test
+      run: go test -v ./...
+      
+    - name: Build (for validation)
+      run: go build -v ./...
+
+  # This job runs ONLY when a new tag is pushed.
+  release:
+    name: Create Release
+    # This job should only run when a tag is pushed.
+    if: startsWith(github.ref, 'refs/tags/')
+    # It needs the build-and-test job to succeed first.
+    needs: build-and-test
+    runs-on: ubuntu-latest
+    
+    strategy:
+      # Use a matrix to build for multiple platforms
+      matrix:
+        goos: [linux, windows, darwin] # OS
+        goarch: [amd64, arm64]         # Architecture
+        exclude:
+          # Add any platform combinations you want to exclude
+          # For example, if you don't support windows on arm64:
+          # - goos: windows
+          #   goarch: arm64
+          - {}
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up Go
+      uses: actions/setup-go@v5
       with:
-        # Artifact name
-        name: wrapper-manager # optional, default is artifact
-        # A file, directory or wildcard pattern that describes what to upload
-        path: ./wrapper-manager
+        go-version-file: './go.mod'
+
+    - name: Build for release
+      # Use CGO_ENABLED=0 for static binaries and easier cross-compilation.
+      # GOOS and GOARCH are set from the matrix variables.
+      # The output binary is named based on the platform.
+      env:
+        GOOS: ${{ matrix.goos }}
+        GOARCH: ${{ matrix.goarch }}
+        CGO_ENABLED: 0
+      run: |
+        # Define the output binary name, adding '.exe' for Windows
+        BINARY_NAME="wrapper-manager"
+        if [ "$GOOS" = "windows" ]; then
+          BINARY_NAME+=".exe"
+        fi
+        
+        # Build the application
+        go build -v -trimpath -ldflags="-s -w" -o "dist/${BINARY_NAME}" .
+    
+    - name: Archive the binary
+      # Create a compressed archive of the binary for the release.
+      # Use .zip for Windows, and .tar.gz for Linux/macOS.
+      run: |
+        ARCHIVE_NAME="wrapper-manager-${{ matrix.goos }}-${{ matrix.goarch }}"
+        if [ "${{ matrix.goos }}" = "windows" ]; then
+          (cd dist && zip "../${ARCHIVE_NAME}.zip" *)
+        else
+          (cd dist && tar czf "../${ARCHIVE_NAME}.tar.gz" *)
+        fi
+        
+    - name: Upload Release Asset
+      # This step uploads the compiled and archived binary so it can be attached to the release.
+      uses: actions/upload-artifact@v4
+      with:
+        name: release-assets
+        path: |
+          wrapper-manager-*.zip
+          wrapper-manager-*.tar.gz
+
+  # This job takes the artifacts from the 'release' job and creates the GitHub Release.
+  create-github-release:
+    name: Create GitHub Release
+    if: startsWith(github.ref, 'refs/tags/')
+    needs: release
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write # Required to create a release
+      
+    steps:
+      - name: Download all release assets
+        uses: actions/download-artifact@v4
+        with:
+          name: release-assets
+          path: release-assets
           
-
-
+      - name: Create Release and Upload Assets
+        # This action creates the release and uploads all files in the `files` path.
+        uses: softprops/action-gh-release@v2
+        with:
+          # This will use the tag name as the release name
+          # It will automatically generate release notes from commits
+          generate_release_notes: true
+          # The files to upload to the release
+          files: |
+            release-assets/*
