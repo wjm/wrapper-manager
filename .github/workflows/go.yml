@@ -62,12 +62,6 @@ jobs:
       matrix:
         goos: [linux, windows, darwin] # OS
         goarch: [amd64, arm64]         # Architecture
-        exclude:
-          # Add any platform combinations you want to exclude
-          # For example, if you don't support windows on arm64:
-          # - goos: windows
-          #   goarch: arm64
-          - {}
 
     steps:
     - name: Checkout code
