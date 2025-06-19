@@ -21,8 +21,10 @@ jobs:
       with:
         go-versionifile: './go.mod'
 
+    - name: setup
+      run: go mod tidy
     - name: Build
-      run: CGO_ENABLED=1 GOOS=linux go build -v ./... -o wrapper-manager
+      run: CGO_ENABLED=1 GOOS=linux go build -v -o wrapper-manager
     - name: Upload a Build Artifact
       uses: actions/upload-artifact@v4.6.2
       with:
