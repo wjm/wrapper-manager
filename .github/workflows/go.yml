@@ -134,4 +134,4 @@ jobs:
           generate_release_notes: true
           # The files to upload to the release
           files: |
-            release-assets/*
+            release-assets/*/*
