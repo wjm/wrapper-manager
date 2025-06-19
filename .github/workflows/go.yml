@@ -33,7 +33,6 @@ jobs:
     - name: Set up Go
       uses: actions/setup-go@v5
       with:
-        # Note: I've corrected the typo from 'go-versionifile' to 'go-version-file'
         go-version-file: './go.mod'
         cache: true # Enable build caching
 
@@ -106,7 +105,7 @@ jobs:
       # This step uploads the compiled and archived binary so it can be attached to the release.
       uses: actions/upload-artifact@v4
       with:
-        name: release-assets
+        name: artifact-${{ matrix.goos }}-${{ matrix.goarch }}
         path: |
           wrapper-manager-*.zip
           wrapper-manager-*.tar.gz
